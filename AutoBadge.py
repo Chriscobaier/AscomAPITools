@@ -7,11 +7,25 @@ import urllib3
 
 
 def extractData():
+    siteBadges = []
     # Reads file provided in appsettings and sends each row to be get the staffID from Unite Web API
+    url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
+    siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
+    siteJsonBadges = siteGetBadges.json()
+    j = int(siteJsonBadges['TotalCount'])
+    print(j)
+    while j > 0:
+        siteBadges.append(siteJsonBadges['Result'][j-1]['BadgeId'])
+        j -= 1
     with open(badgeCSV) as badgeData:
         csvReader = csv.reader(badgeData, delimiter=',')
         for entry in csvReader:
-            getStaffID(entry)
+            if entry[0] in siteBadges:
+                entry.append("Badge already exists in system")
+                writeSkippedBadges(entry)
+
+            else:
+                getStaffID(entry)
 
 
 def writeSkippedBadges(data):
@@ -23,9 +37,7 @@ def writeSkippedBadges(data):
 
 def writeBadgeWithStaff(i):
     # Has badge, staff, staffID data.  Sends to RTLSBadges API with staffID and badgeID
-
-    fqdn = uniteFQDN
-    url = f"https://{fqdn}/Services.WebApi/api/v2/RtlsBadges"
+    url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
         "ModuleId": 0,
         "UserId": i[2],
@@ -37,14 +49,13 @@ def writeBadgeWithStaff(i):
         i.append("Error adding badge in API")
         writeSkippedBadges(i)
     else:
-        print(f"Adding badge {i[0]} to user {i[1]} with {i[2]} userID")
+        print(f"Adding badge {i[0]} to user {i[1]} with userID {i[2]} ")
 
 
 def writeBadgeNoStaff(i):
     # Reads the skipped badges file that was previously created, however this only adds badges to system, no staffID
     print(f"Adding {i[0]} badge with no userID")
-    fqdn = uniteFQDN
-    url = f"https://{fqdn}/Services.WebApi/api/v2/RtlsBadges"
+    url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
         "ModuleId": 0,
         "BadgeId": str(i[0]),
@@ -70,8 +81,7 @@ def getStaffID(entry):
         for i in entry:
             badgeToEnter.append(i)
         StaffName = entry[1]
-        fqdn = uniteFQDN
-        staffPayLoad = f"https://{fqdn}/Services.WebApi/api/v2/StaffSearch?criteria=%7B%0A%20%20%22Pattern%22%3A%20%22{StaffName}%22%2C%0A%20%20%22UserIds%22%3A%20%5B%5D%2C%0A%20%20%22DeviceAddressIds%22%3A%20%5B%5D%2C%0A%20%20%22OrganizationId%22%3A%20null%2C%0A%20%20%22UserSortOrder%22%3A%200%2C%0A%20%20%22UserSortDirection%22%3A%200%2C%0A%20%20%22DeviceSortOrder%22%3A%200%2C%0A%20%20%22DeviceSortDirection%22%3A%200%2C%0A%20%20%22IncludeUsers%22%3A%20true%2C%0A%20%20%22IncludeDevices%22%3A%20true%2C%0A%20%20%22ExtraSearchableFields%22%3A%20%5B%0A%20%20%20%20%7B%0A%20%20%20%20%20%20%22UserId%22%3A%201%2C%0A%20%20%20%20%20%20%22SearchableValue%22%3A%20%22extra%22%2C%0A%20%20%20%20%20%20%22MatchingField%22%3A%2099%2C%0A%20%20%20%20%20%20%22SearchCondition%22%3A%200%0A%20%20%20%20%7D%0A%20%20%5D%2C%0A%20%20%22IgnoreMatchingFields%22%3A%20%5B%0A%20%20%20%2099%0A%20%20%5D%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2050%0A%7D"
+        staffPayLoad = f"https://{uniteFQDN}/Services.WebApi/api/v2/StaffSearch?criteria=%7B%0A%20%20%22Pattern%22%3A%20%22{StaffName}%22%2C%0A%20%20%22UserIds%22%3A%20%5B%5D%2C%0A%20%20%22DeviceAddressIds%22%3A%20%5B%5D%2C%0A%20%20%22OrganizationId%22%3A%20null%2C%0A%20%20%22UserSortOrder%22%3A%200%2C%0A%20%20%22UserSortDirection%22%3A%200%2C%0A%20%20%22DeviceSortOrder%22%3A%200%2C%0A%20%20%22DeviceSortDirection%22%3A%200%2C%0A%20%20%22IncludeUsers%22%3A%20true%2C%0A%20%20%22IncludeDevices%22%3A%20true%2C%0A%20%20%22ExtraSearchableFields%22%3A%20%5B%0A%20%20%20%20%7B%0A%20%20%20%20%20%20%22UserId%22%3A%201%2C%0A%20%20%20%20%20%20%22SearchableValue%22%3A%20%22extra%22%2C%0A%20%20%20%20%20%20%22MatchingField%22%3A%2099%2C%0A%20%20%20%20%20%20%22SearchCondition%22%3A%200%0A%20%20%20%20%7D%0A%20%20%5D%2C%0A%20%20%22IgnoreMatchingFields%22%3A%20%5B%0A%20%20%20%2099%0A%20%20%5D%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2050%0A%7D"
         newData = requests.get(staffPayLoad, auth=(uniteUsername, unitePassword), verify=False)
         if newData.status_code == 200:
             json_data = newData.json()
