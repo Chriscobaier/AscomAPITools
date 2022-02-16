@@ -23,6 +23,7 @@ def writeSkippedBadges(data):
 
 def writeBadgeWithStaff(i):
     # Has badge, staff, staffID data.  Sends to RTLSBadges API with staffID and badgeID
+    print(f"Adding {i[0]} badge with {i[2]} userID")
     fqdn = uniteFQDN
     url = f"https://{fqdn}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
@@ -39,6 +40,7 @@ def writeBadgeWithStaff(i):
 
 def writeBadgeNoStaff(i):
     # Reads the skipped badges file that was previously created, however this only adds badges to system, no staffID
+    print(f"Adding {i[0]} badge with no userID")
     fqdn = uniteFQDN
     url = f"https://{fqdn}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
