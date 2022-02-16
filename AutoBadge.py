@@ -13,7 +13,6 @@ def extractData():
     siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
     siteJsonBadges = siteGetBadges.json()
     j = int(siteJsonBadges['TotalCount'])
-    print(j)
     while j > 0:
         siteBadges.append(siteJsonBadges['Result'][j-1]['BadgeId'])
         j -= 1
