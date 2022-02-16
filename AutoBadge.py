@@ -23,7 +23,7 @@ def writeSkippedBadges(data):
 
 def writeBadgeWithStaff(i):
     # Has badge, staff, staffID data.  Sends to RTLSBadges API with staffID and badgeID
-    print(f"Adding {i[0]} badge with {i[2]} userID")
+
     fqdn = uniteFQDN
     url = f"https://{fqdn}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
@@ -36,6 +36,8 @@ def writeBadgeWithStaff(i):
     if myPost.status_code != 201:
         i.append("Error adding badge in API")
         writeSkippedBadges(i)
+    else:
+        print(f"Adding badge {i[0]} to user {i[1]} with {i[2]} userID")
 
 
 def writeBadgeNoStaff(i):
@@ -68,11 +70,9 @@ def getStaffID(entry):
         for i in entry:
             badgeToEnter.append(i)
         StaffName = entry[1]
-        print(StaffName)
         fqdn = uniteFQDN
         staffPayLoad = f"https://{fqdn}/Services.WebApi/api/v2/StaffSearch?criteria=%7B%0A%20%20%22Pattern%22%3A%20%22{StaffName}%22%2C%0A%20%20%22UserIds%22%3A%20%5B%5D%2C%0A%20%20%22DeviceAddressIds%22%3A%20%5B%5D%2C%0A%20%20%22OrganizationId%22%3A%20null%2C%0A%20%20%22UserSortOrder%22%3A%200%2C%0A%20%20%22UserSortDirection%22%3A%200%2C%0A%20%20%22DeviceSortOrder%22%3A%200%2C%0A%20%20%22DeviceSortDirection%22%3A%200%2C%0A%20%20%22IncludeUsers%22%3A%20true%2C%0A%20%20%22IncludeDevices%22%3A%20true%2C%0A%20%20%22ExtraSearchableFields%22%3A%20%5B%0A%20%20%20%20%7B%0A%20%20%20%20%20%20%22UserId%22%3A%201%2C%0A%20%20%20%20%20%20%22SearchableValue%22%3A%20%22extra%22%2C%0A%20%20%20%20%20%20%22MatchingField%22%3A%2099%2C%0A%20%20%20%20%20%20%22SearchCondition%22%3A%200%0A%20%20%20%20%7D%0A%20%20%5D%2C%0A%20%20%22IgnoreMatchingFields%22%3A%20%5B%0A%20%20%20%2099%0A%20%20%5D%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2050%0A%7D"
         newData = requests.get(staffPayLoad, auth=(uniteUsername, unitePassword), verify=False)
-        print(newData.status_code)
         if newData.status_code == 200:
             json_data = newData.json()
             i = 0
@@ -86,9 +86,9 @@ def getStaffID(entry):
             # Do not add badge if user already has a badge
             staffBadgeData = json_data['Users'][0]['User']['RtlsBadges']
             if len(staffBadgeData) == 0 and i == 1:
-                    staffID = json_data['Users'][0]['User']['Id']
-                    badgeToEnter.append(staffID)
-                    writeBadgeWithStaff(badgeToEnter)
+                staffID = json_data['Users'][0]['User']['Id']
+                badgeToEnter.append(staffID)
+                writeBadgeWithStaff(badgeToEnter)
             elif i < 2:
                 entry.append("Staff has badge associated already")
                 writeSkippedBadges(entry)
