@@ -4,10 +4,10 @@ import requests
 import csv
 import json
 import urllib3
-
+siteBadges = []
 
 def extractData():
-    siteBadges = []
+
     # Reads file provided in appsettings and sends each row to be get the staffID from Unite Web API
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
     siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
@@ -112,7 +112,12 @@ def addBadgeIDOnly():
     with open("BadgesNotAdded.csv") as badgeData:
         csvReader = csv.reader(badgeData, delimiter=',')
         for entry in csvReader:
-            writeBadgeNoStaff(entry)
+            if entry[0] in siteBadges:
+                entry.append("Badge already exists in system")
+                writeFailedBadges(entry)
+
+            else:
+                writeBadgeNoStaff(entry)
 
 
 def main():
