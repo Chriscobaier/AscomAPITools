@@ -4,27 +4,50 @@ import requests
 import csv
 import json
 import urllib3
+
 siteBadges = []
 
-def extractData():
 
+def extractData():
     # Reads file provided in appsettings and sends each row to be get the staffID from Unite Web API
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
     siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
     siteJsonBadges = siteGetBadges.json()
     j = int(siteJsonBadges['TotalCount'])
     while j > 0:
-        siteBadges.append(siteJsonBadges['Result'][j-1]['BadgeId'])
+        siteBadges.append(siteJsonBadges['Result'][j - 1]['BadgeId'])
         j -= 1
     with open(badgeCSV) as badgeData:
         csvReader = csv.reader(badgeData, delimiter=',')
         for entry in csvReader:
             if entry[0] in siteBadges:
+                print(f"Badge {entry[0]} already exists in system")
                 entry.append("Badge already exists in system")
                 writeSkippedBadges(entry)
 
             else:
                 getStaffID(entry)
+
+
+def addBadgeIDOnly():
+    # reads the skipped badges file and attempts to process each badge ID into the system without a user
+    url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
+    siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
+    siteJsonBadges = siteGetBadges.json()
+    j = int(siteJsonBadges['TotalCount'])
+    while j > 0:
+        siteBadges.append(siteJsonBadges['Result'][j - 1]['BadgeId'])
+        j -= 1
+    with open("BadgesNotAdded.csv") as badgeData:
+        csvReader = csv.reader(badgeData, delimiter=',')
+        for entry in csvReader:
+            if entry[0] in siteBadges:
+                entry.append("Badge already exists in system")
+                print(f"Badge {entry[0]} already exists in system")
+                writeFailedBadges(entry)
+
+            else:
+                writeBadgeNoStaff(entry)
 
 
 def writeSkippedBadges(data):
@@ -53,7 +76,7 @@ def writeBadgeWithStaff(i):
 
 def writeBadgeNoStaff(i):
     # Reads the skipped badges file that was previously created, however this only adds badges to system, no staffID
-    print(f"Adding {i[0]} badge with no userID")
+
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
         "ModuleId": 0,
@@ -61,7 +84,9 @@ def writeBadgeNoStaff(i):
         "SiteId": 1
     }
     myPost = requests.post(url, auth=(uniteUsername, unitePassword), verify=False, data=payload)
-    if myPost.status_code != 201:
+    if myPost.status_code == 201:
+        print(f"Adding {i[0]} badge with no userID")
+    else:
         writeFailedBadges(i)
 
 
@@ -105,19 +130,6 @@ def getStaffID(entry):
     else:
         entry.append("No Staff Name associated to badge")
         writeSkippedBadges(entry)
-
-
-def addBadgeIDOnly():
-    # reads the skipped badges file and attempts to process each badge ID into the system without a user
-    with open("BadgesNotAdded.csv") as badgeData:
-        csvReader = csv.reader(badgeData, delimiter=',')
-        for entry in csvReader:
-            if entry[0] in siteBadges:
-                entry.append("Badge already exists in system")
-                writeFailedBadges(entry)
-
-            else:
-                writeBadgeNoStaff(entry)
 
 
 def main():
