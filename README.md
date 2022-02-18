@@ -1,4 +1,5 @@
 ### NOTE THIS HAS ONLY BEEN TESTED ON UPS 4.14 - this uses StaffSearch API which was introduced in this version. Other versions should work - will need to verify
+### Use RTLS Badge CSV Creator (Credit- Sean Fisher) to assist in creating badge csv file
 This AutoBadge exe is used to import a csv file through the Unite API and assign the badge to a user that matches the name in the CSV file.
 
 Requires you to update the appsettings within quotes like the examples in the .json
@@ -14,4 +15,4 @@ Requires you to update the appsettings within quotes like the examples in the .j
    file which should be the badgeID.
 
 
-Use RTLS Badge CSV Creator (Credit- Sean Fisher) to assist in creating badge csv file
+
