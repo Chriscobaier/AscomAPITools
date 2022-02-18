@@ -161,7 +161,7 @@ def main():
                 badgesOnly = paramData["BadgesOnly"]
                 if paramData["BadgesOnly"].upper() == "TRUE":
                     badgesOnly = True
-                if paramData["BadgesOnly"].upper() == "FALSE":
+                elif paramData["BadgesOnly"].upper() == "FALSE":
                     badgesOnly = False
                 else:
                     print("Invalid input for BadgesOnly")
