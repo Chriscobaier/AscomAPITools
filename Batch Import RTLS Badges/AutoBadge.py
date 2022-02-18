@@ -170,11 +170,15 @@ def main():
             print("Application settings cannot be read")
             nextTask = "NO"
     # first get site badges into list: siteBadges
+
     getSiteBadges()
     if not badgesOnly:
         extractData()
     if badgesOnly:
         addBadgeIDOnly()
+    print("Reached end of file - please read the FailedBadges.csv for a list of badges that did NOT get added")
+    print("Press any key to close")
+    input()
 
 
 if __name__ == "__main__":
