@@ -128,7 +128,7 @@ def getStaffID(entry):
 
 def main():
     print("##################################################################################################")
-    print("###  This program was written by Christian Baier 2Feb2022.  This will import badges from a csv ###")
+    print("###  This program was written by Christian Baier 17Feb2022. This will import badges from a csv ###")
     print("###  file into Unite.  The format of the data must be in the following format:                 ###")
     print("###  <BadgeID>, <StaffName>                                                                    ###")
     print("###  1111, John Doe                                                                            ###")
