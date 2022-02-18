@@ -12,3 +12,6 @@ Requires you to update the appsettings within quotes like the examples in the .j
    "UnitePassword":"password for admin"
    "BadgesOnly" defaults to "False".  Setting this to "True" will only read the first item in the badges.csv
    file which should be the badgeID.
+
+
+Use RTLS Badge CSV Creator (Credit- Sean Fisher) to assist in creating badge csv file
