@@ -8,57 +8,48 @@ import urllib3
 siteBadges = []
 
 
-def extractData():
-    # Reads file provided in appsettings and sends each row to be get the staffID from Unite Web API
+def getSiteBadges():
+    # Calls API to get first 10000 badges
+    print('getting badges')
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
     siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
     siteJsonBadges = siteGetBadges.json()
+    # TODO find limits on if this will break with large badge data / how will it affect processing time
     j = int(siteJsonBadges['TotalCount'])
     while j > 0:
         siteBadges.append(siteJsonBadges['Result'][j - 1]['BadgeId'])
         j -= 1
+
+
+def extractData():
+    # Reads file provided in appsettings and sends each row to be get the staffID from Unite Web API
     with open(badgeCSV) as badgeData:
         csvReader = csv.reader(badgeData, delimiter=',')
         for entry in csvReader:
             if entry[0] in siteBadges:
                 print(f"Badge {entry[0]} already exists in system")
                 entry.append("Badge already exists in system")
-                writeSkippedBadges(entry)
-
+                writeFailedBadges(entry)
             else:
                 getStaffID(entry)
 
 
 def addBadgeIDOnly():
     # reads the skipped badges file and attempts to process each badge ID into the system without a user
-    url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges?criteria=%7B%0A%0A%20%20%22Pattern%22%3A%20%22null%22%2C%0A%20%20%22Index%22%3A%200%2C%0A%20%20%22BatchCount%22%3A%2010000%0A%7D"
-    siteGetBadges = requests.get(url, auth=(uniteUsername, unitePassword), verify=False)
-    siteJsonBadges = siteGetBadges.json()
-    j = int(siteJsonBadges['TotalCount'])
-    while j > 0:
-        siteBadges.append(siteJsonBadges['Result'][j - 1]['BadgeId'])
-        j -= 1
-    with open("BadgesNotAdded.csv") as badgeData:
+    with open(f"{badgeCSV}") as badgeData:
         csvReader = csv.reader(badgeData, delimiter=',')
         for entry in csvReader:
             if entry[0] in siteBadges:
                 entry.append("Badge already exists in system")
                 print(f"Badge {entry[0]} already exists in system")
                 writeFailedBadges(entry)
-
             else:
                 writeBadgeNoStaff(entry)
 
 
-def writeSkippedBadges(data):
-    # Creates a new csv file, badges without a StaffName, or Staff Names that had multiple results will be here
-    with open('BadgesNotAdded.csv', 'a', newline='') as newFile:
-        writer = csv.writer(newFile)
-        writer.writerow(data)
-
-
 def writeBadgeWithStaff(i):
     # Has badge, staff, staffID data.  Sends to RTLSBadges API with staffID and badgeID
+    # TODO is module ID important, siteID is always 1 ( I think )
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
         "ModuleId": 0,
@@ -68,15 +59,15 @@ def writeBadgeWithStaff(i):
     }
     myPost = requests.post(url, auth=(uniteUsername, unitePassword), verify=False, data=payload)
     if myPost.status_code != 201:
-        i.append("Error adding badge in API")
-        writeSkippedBadges(i)
+        i.append(f"{myPost.status_code} Error adding badge in API")
+        writeFailedBadges(i)
     else:
         print(f"Adding badge {i[0]} to user {i[1]} with userID {i[2]} ")
 
 
 def writeBadgeNoStaff(i):
-    # Reads the skipped badges file that was previously created, however this only adds badges to system, no staffID
-
+    # Reads the  badges file, however this only adds badges(first column) to system, no staffID
+    # TODO is module ID important, siteID is always 1 ( I think )
     url = f"https://{uniteFQDN}/Services.WebApi/api/v2/RtlsBadges"
     payload = {
         "ModuleId": 0,
@@ -87,6 +78,7 @@ def writeBadgeNoStaff(i):
     if myPost.status_code == 201:
         print(f"Adding {i[0]} badge with no userID")
     else:
+        i.append(f"{myPost.status_code} Error adding badge in API")
         writeFailedBadges(i)
 
 
@@ -98,7 +90,7 @@ def writeFailedBadges(data):
 
 
 def getStaffID(entry):
-    # Gets Badge and StaffName, sends name to webAPI and adds StaffName to list. If it cannot find a staffname, or has multiple results from API
+    # Gets Badge and StaffName, sends name to webAPI and adds StaffName to list. If it cannot find a staff name, or has multiple results from API
     # it will add to a csv file
     badgeToEnter = []
     if entry[1] != "":
@@ -110,26 +102,28 @@ def getStaffID(entry):
         if newData.status_code == 200:
             json_data = newData.json()
             i = 0
-            # Do not add badges with staff ID if multiple results for staffname (JohnDoe)
+            # Do not add badges with staff ID if multiple results for staff name (JohnDoe)
             for users in json_data['Users']:
                 i += 1
             if i > 1 or i == 0:
+                print("Multiple Results for Staff Name or does not exist")
                 entry.append("Multiple Results for Staff Name or does not exist")
-                writeSkippedBadges(entry)
+                writeFailedBadges(entry)
+            else:
 
-            # Do not add badge if user already has a badge
-            staffBadgeData = json_data['Users'][0]['User']['RtlsBadges']
-            if len(staffBadgeData) == 0 and i == 1:
-                staffID = json_data['Users'][0]['User']['Id']
-                badgeToEnter.append(staffID)
-                writeBadgeWithStaff(badgeToEnter)
-            elif i < 2:
-                entry.append("Staff has badge associated already")
-                writeSkippedBadges(entry)
+                # Do not add badge if user already has a badge
+                staffBadgeData = json_data['Users'][0]['User']['RtlsBadges']
+                if len(staffBadgeData) == 0 and i == 1:
+                    staffID = json_data['Users'][0]['User']['Id']
+                    badgeToEnter.append(staffID)
+                    writeBadgeWithStaff(badgeToEnter)
+                else:
+                    entry.append("Staff has badge associated already")
+                    writeFailedBadges(entry)
 
     else:
         entry.append("No Staff Name associated to badge")
-        writeSkippedBadges(entry)
+        writeFailedBadges(entry)
 
 
 def main():
@@ -142,7 +136,9 @@ def main():
     print("###  3333, John                                                                                ###")
     print("###  As with any change to a system, you must take a SQL backup prior to continuing            ###")
     print("##################################################################################################")
+
     # Get user input to go next
+    # Use this to fix SSL warnings
     urllib3.disable_warnings()
     nextTask = "NO"
     while nextTask != "YES":
@@ -162,16 +158,23 @@ def main():
                 badgeCSV = paramData["BadgeCSVFile"]
                 uniteUsername = paramData["UniteUserName(admin)"]
                 unitePassword = paramData["UnitePassword"]
+                badgesOnly = paramData["BadgesOnly"]
+                if paramData["BadgesOnly"].upper() == "TRUE":
+                    badgesOnly = True
+                if paramData["BadgesOnly"].upper() == "FALSE":
+                    badgesOnly = False
+                else:
+                    print("Invalid input for BadgesOnly")
+                    raise ValueError
         except:
             print("Application settings cannot be read")
             nextTask = "NO"
-    while nextTask != 0:
-        nextTask = int(input("Enter 0 to stop, 1 to read csv, 2 to import badges without name:  "))
-        if nextTask == 1:
-            extractData()
-        if nextTask == 2:
-            nextTask = int(input("This will input the badge IDs only from BadgesNotAdded.csv enter 2 to continue:  "))
-            addBadgeIDOnly()
+    # first get site badges into list: siteBadges
+    getSiteBadges()
+    if not badgesOnly:
+        extractData()
+    if badgesOnly:
+        addBadgeIDOnly()
 
 
 if __name__ == "__main__":
